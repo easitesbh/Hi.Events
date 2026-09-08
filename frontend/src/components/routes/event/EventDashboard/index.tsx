@@ -75,7 +75,9 @@ export const EventDashboard = () => {
 
     const organizerId = event?.organizer_id ?? event?.organizer?.id;
     const {data: organizer} = useGetOrganizer(organizerId);
-    const isStripeConnected = !!organizer?.stripe_connect_setup_complete;
+    // Em modo self-hosted (nao-SaaS) o backend nao envia este campo.
+    // So bloqueia quando o backend diz explicitamente que nao esta ligado.
+    const isStripeConnected = organizer?.stripe_connect_setup_complete !== false;
     const {data: productCategoriesResponse} = useGetEventProductCategories(eventId);
     const productCount = productCategoriesResponse?.data?.reduce(
         (sum, category) => sum + (category.products?.length ?? 0),

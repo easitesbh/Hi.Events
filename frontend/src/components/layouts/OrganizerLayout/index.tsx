@@ -67,7 +67,9 @@ const OrganizerLayout = () => {
 
     const statusToggleMutation = useUpdateOrganizerStatus();
 
-    const isStripeConnected = !!organizer?.stripe_connect_setup_complete;
+    // Em modo self-hosted (nao-SaaS) o backend nao envia este campo.
+    // So bloqueia quando o backend diz explicitamente que nao esta ligado.
+    const isStripeConnected = organizer?.stripe_connect_setup_complete !== false;
     const showPayoutsSection = !!account?.is_saas_mode_enabled;
 
     const navItems: NavItem[] = [
