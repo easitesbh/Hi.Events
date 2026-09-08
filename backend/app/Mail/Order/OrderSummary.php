@@ -12,6 +12,7 @@ use HiEvents\DomainObjects\OrganizerDomainObject;
 use HiEvents\Helper\Url;
 use HiEvents\Mail\BaseMail;
 use HiEvents\Services\Domain\Email\DTO\RenderedEmailTemplateDTO;
+use HiEvents\Services\Domain\Order\OrderTaxNumberResolver;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -85,6 +86,7 @@ class OrderSummary extends BaseMail
         }
 
         $invoice = Pdf::loadView('invoice', [
+            'taxNumber' => app(OrderTaxNumberResolver::class)->resolveForOrder($this->order->getId()),
             'order' => $this->order,
             'event' => $this->event,
             'organizer' => $this->organizer,

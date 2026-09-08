@@ -17,6 +17,7 @@ class GenerateOrderInvoicePDFService
     public function __construct(
         private readonly OrderRepositoryInterface $orderRepository,
         private readonly InvoiceRepositoryInterface $invoiceRepository,
+        private readonly OrderTaxNumberResolver $orderTaxNumberResolver,
     ) {}
 
     public function generatePdfFromOrderShortId(string $orderShortId, int $eventId): InvoicePdfResponseDTO
@@ -56,6 +57,7 @@ class GenerateOrderInvoicePDFService
 
         return new InvoicePdfResponseDTO(
             pdf: Pdf::loadView('invoice', [
+                'taxNumber' => $this->orderTaxNumberResolver->resolveForOrder($order->getId()),
                 'order' => $order,
                 'event' => $order->getEvent(),
                 'organizer' => $order->getEvent()->getOrganizer(),

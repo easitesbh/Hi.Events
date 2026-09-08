@@ -351,6 +351,9 @@
     <div class="billing-title">{{ __('Billed To') }}</div>
     <div class="billing-name">{{ $order->getFullName() }}</div>
     <div>{{ $order->getEmail() }}</div>
+    @if(!empty($taxNumber ?? null))
+        <div>{{ __('Tax number') }}: {{ $taxNumber }}</div>
+    @endif
     @if($order->getAddress())
         <div>{{ $order->getBillingAddressString() }}</div>
     @endif
