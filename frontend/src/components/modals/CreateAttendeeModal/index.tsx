@@ -1,5 +1,13 @@
 import {Modal} from "../../common/Modal";
-import {EventOccurrenceStatus, EventType, GenericModalProps, ProductCategory, ProductType, QueryFilters} from "../../../types.ts";
+import {
+    EventOccurrenceStatus,
+    EventType,
+    GenericModalProps,
+    ProductCategory,
+    ProductType,
+    Question,
+    QueryFilters
+} from "../../../types.ts";
 import {Button} from "../../common/Button";
 import {useNavigate, useParams} from "react-router";
 import {useFormErrorResponseHandler} from "../../../hooks/useFormErrorResponseHandler.tsx";
@@ -27,6 +35,8 @@ import {useGetPriceOverrides} from "../../../queries/useGetPriceOverrides.ts";
 import {prettyDate} from "../../../utilites/dates.ts";
 import {BouncingEmoji} from "../../common/BouncingEmoji";
 import {Stack, Text} from "@mantine/core";
+import {useGetEventQuestions} from "../../../queries/useGetEventQuestions.ts";
+import {QuestionInput} from "../../common/CheckoutQuestion";
 
 export const CreateAttendeeModal = ({onClose}: GenericModalProps) => {
     const {eventId} = useParams();
@@ -41,6 +51,7 @@ export const CreateAttendeeModal = ({onClose}: GenericModalProps) => {
         eventId,
         {pageNumber: 1, perPage: 1200} as QueryFilters,
     );
+    const {data: eventQuestions} = useGetEventQuestions(eventId);
 
     const occurrenceOptions = useMemo(() => {
         if (!isRecurring || !occurrencesData?.data) return [];
@@ -65,6 +76,7 @@ export const CreateAttendeeModal = ({onClose}: GenericModalProps) => {
             locale: getClientLocale() as SupportedLocales,
             event_occurrence_id: null,
             override_capacity: false,
+            questions: [],
         },
     });
 
@@ -86,6 +98,41 @@ export const CreateAttendeeModal = ({onClose}: GenericModalProps) => {
             form.setFieldValue('override_capacity', false);
         }
     }, [occurrenceIsFull]);
+
+    const applicableQuestions = useMemo<Question[]>(() => {
+        if (!eventQuestions) {
+            return [];
+        }
+
+        const productId = Number(form.values.product_id);
+
+        return eventQuestions.filter(question => {
+            if (question.is_hidden) {
+                return false;
+            }
+
+            if (question.belongs_to === 'ORDER') {
+                return true;
+            }
+
+            return !!productId && !!question.product_ids?.includes(productId);
+        });
+    }, [eventQuestions, form.values.product_id]);
+
+    useEffect(() => {
+        // Keep anything already typed when the applicable question list changes (e.g. a different ticket).
+        const existingResponses = new Map(
+            (form.values.questions ?? []).map(answer => [String(answer.question_id), answer.response]),
+        );
+
+        form.setFieldValue(
+            'questions',
+            applicableQuestions.map(question => ({
+                question_id: question.id,
+                response: existingResponses.get(String(question.id)) ?? {},
+            })),
+        );
+    }, [applicableQuestions]);
 
     const {data: priceOverrides} = useGetPriceOverrides(
         eventId,
@@ -309,6 +356,22 @@ export const CreateAttendeeModal = ({onClose}: GenericModalProps) => {
                             />
                         )
                     }
+                )}
+
+                {applicableQuestions.length > 0 && form.values.questions?.length === applicableQuestions.length && (
+                    <Stack gap={0} mt={20}>
+                        <Text fw={600} size="sm" mb={8}>
+                            {t`Registration Questions`}
+                        </Text>
+                        {applicableQuestions.map((question, index) => (
+                            <QuestionInput
+                                key={question.id}
+                                question={question}
+                                name={`questions.${index}.response`}
+                                form={form}
+                            />
+                        ))}
+                    </Stack>
                 )}
 
                 <Switch

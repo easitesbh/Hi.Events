@@ -21,6 +21,12 @@ export interface CreateAttendeeRequest extends EditAttendeeRequest {
     locale: SupportedLocales,
     event_occurrence_id?: number | null,
     override_capacity?: boolean,
+    questions?: AttendeeQuestionAnswerRequest[],
+}
+
+export interface AttendeeQuestionAnswerRequest {
+    question_id: IdParam,
+    response: Record<string, any>,
 }
 
 export const attendeesClient = {

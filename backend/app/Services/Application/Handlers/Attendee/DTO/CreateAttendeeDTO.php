@@ -25,5 +25,12 @@ class CreateAttendeeDTO extends BaseDTO
         public readonly ?string $client_user_agent = null,
         #[CollectionOf(CreateAttendeeTaxAndFeeDTO::class)]
         public readonly ?Collection $taxes_and_fees = null,
+        /**
+         * Raw question answers, shaped like the checkout payload:
+         * [['question_id' => 1, 'response' => ['answer' => '...']], ...]
+         *
+         * @var array<int, array<string, mixed>>|null
+         */
+        public readonly ?array $questions = null,
     ) {}
 }
