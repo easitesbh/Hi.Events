@@ -26,6 +26,8 @@ const orderStatuses = [
     {label: t`Completed`, value: 'COMPLETED'},
     {label: t`Cancelled`, value: 'CANCELLED'},
     {label: t`Awaiting Offline Payment`, value: 'AWAITING_OFFLINE_PAYMENT'},
+    {label: t`Reserved`, value: 'RESERVED'},
+    {label: t`Abandoned`, value: 'ABANDONED'},
 ];
 
 const refundStatuses = [
@@ -114,7 +116,7 @@ export const Orders: React.FC = () => {
         const occurrenceId = selectedOccurrenceId ? Number(selectedOccurrenceId) : null;
         await withLoadingNotification(async () => {
                 setDownloadPending(true);
-                const blob = await orderClient.exportOrders(eventId, occurrenceId);
+                const blob = await orderClient.exportOrders(eventId, occurrenceId, currentFilters.status);
                 downloadBinary(blob, 'orders.xlsx');
             },
             {

@@ -15,6 +15,8 @@ const getStatusLabel = (status: string): string => {
         'REFUNDED': t`Refunded`,
         'PARTIALLY_REFUNDED': t`Partially Refunded`,
         'REFUND_PENDING': t`Refund Pending`,
+        'RESERVED': t`Reserved`,
+        'ABANDONED': t`Abandoned`,
     };
     return labels[status] || status.replace('_', ' ');
 };
@@ -23,7 +25,12 @@ export const OrderStatusBadge = ({order, variant = 'outline'}: { order: Order, v
     let color;
     let title;
 
-    if (order.status === 'CANCELLED') {
+    if (order.status === 'RESERVED' || order.status === 'ABANDONED') {
+        // Abandoned carts: show the order status itself, otherwise both would read
+        // "Awaiting Payment" and become indistinguishable in the order list.
+        color = getStatusColor(order.status);
+        title = getStatusLabel(order.status);
+    } else if (order.status === 'CANCELLED') {
         color = getStatusColor(order.status);
         title = getStatusLabel(order.status);
     } else if (order.status === 'AWAITING_OFFLINE_PAYMENT') {

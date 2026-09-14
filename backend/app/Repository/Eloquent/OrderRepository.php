@@ -31,9 +31,17 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         $where = [
             [OrderDomainObjectAbstract::EVENT_ID, '=', $eventId],
-            [OrderDomainObjectAbstract::STATUS, '!=', OrderStatus::RESERVED->name],
-            [OrderDomainObjectAbstract::STATUS, '!=', OrderStatus::ABANDONED->name],
         ];
+
+        // Reserved and abandoned orders (abandoned carts) are hidden by default so they do not
+        // pollute the default order list. They can be surfaced by explicitly filtering on status.
+        $hasStatusFilter = ! empty($params->filter_fields)
+            && $params->filter_fields->firstWhere('field', OrderDomainObjectAbstract::STATUS) !== null;
+
+        if (! $hasStatusFilter) {
+            $where[] = [OrderDomainObjectAbstract::STATUS, '!=', OrderStatus::RESERVED->name];
+            $where[] = [OrderDomainObjectAbstract::STATUS, '!=', OrderStatus::ABANDONED->name];
+        }
 
         if ($params->query) {
             $where[] = static function (Builder $builder) use ($params) {

@@ -7,6 +7,7 @@ use HiEvents\DomainObjects\EventDomainObject;
 use HiEvents\DomainObjects\EventOccurrenceDomainObject;
 use HiEvents\DomainObjects\OrderItemDomainObject;
 use HiEvents\DomainObjects\QuestionAndAnswerViewDomainObject;
+use HiEvents\DomainObjects\Status\OrderStatus;
 use HiEvents\Exports\OrdersExport;
 use HiEvents\Http\Actions\BaseAction;
 use HiEvents\Http\DTO\FilterFieldDTO;
@@ -38,6 +39,21 @@ class ExportOrdersAction extends BaseAction
                 field: 'event_occurrence_id',
                 operator: 'eq',
                 value: (string) $eventOccurrenceId,
+            ));
+        }
+
+        // Mirror the order status filter from the UI, so exporting a filtered list
+        // (e.g. abandoned carts) returns that same list rather than everything.
+        $statuses = array_values(array_filter(
+            (array) $request->input('statuses', []),
+            static fn ($status) => in_array($status, OrderStatus::valuesArray(), true),
+        ));
+
+        if ($statuses !== []) {
+            $filterFields->push(new FilterFieldDTO(
+                field: 'status',
+                operator: 'in',
+                value: implode(',', $statuses),
             ));
         }
 

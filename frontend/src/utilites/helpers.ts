@@ -65,7 +65,10 @@ export const getStatusColor = (status: string): MantineColor => {
         case 'AWAITING_PAYMENT':
         case 'REFUND_PENDING':
         case 'PARTIALLY_REFUNDED':
+        case 'RESERVED':
             return 'orange';
+        case 'ABANDONED':
+            return 'gray';
         case 'CANCELLED':
         case 'REFUND_FAILED':
         case 'REFUNDED':
