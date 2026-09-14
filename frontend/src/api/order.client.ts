@@ -87,8 +87,14 @@ export const orderClient = {
         return response.data;
     },
 
-    exportOrders: async (eventId: IdParam, eventOccurrenceId?: number | null): Promise<Blob> => {
-        const body = eventOccurrenceId ? {event_occurrence_id: eventOccurrenceId} : {};
+    exportOrders: async (eventId: IdParam, eventOccurrenceId?: number | null, statuses?: string[]): Promise<Blob> => {
+        const body: Record<string, unknown> = {};
+        if (eventOccurrenceId) {
+            body.event_occurrence_id = eventOccurrenceId;
+        }
+        if (statuses && statuses.length > 0) {
+            body.statuses = statuses;
+        }
         const response = await api.post(`events/${eventId}/orders/export`, body, {
             responseType: 'blob',
         });
