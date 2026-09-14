@@ -32,6 +32,8 @@ use HiEvents\Services\Application\Handlers\Attendee\DTO\CreateAttendeeDTO;
 use HiEvents\Services\Domain\EventOccurrence\OccurrencePurchaseEligibilityService;
 use HiEvents\Services\Domain\Order\OrderManagementService;
 use HiEvents\Services\Domain\Product\ProductQuantityUpdateService;
+use HiEvents\Repository\Interfaces\QuestionAnswerRepositoryInterface;
+use HiEvents\Repository\Interfaces\QuestionRepositoryInterface;
 use HiEvents\Services\Domain\SelfService\OrderAuditLogService;
 use HiEvents\Services\Domain\Tax\TaxAndFeeRollupService;
 use HiEvents\Services\Infrastructure\DomainEvents\DomainEventDispatcherService;
@@ -78,6 +80,10 @@ class CreateAttendeeHandlerTest extends TestCase
 
     private OrderAuditLogService|MockInterface $orderAuditLogService;
 
+    private QuestionRepositoryInterface|MockInterface $questionRepository;
+
+    private QuestionAnswerRepositoryInterface|MockInterface $questionAnswerRepository;
+
     private CreateAttendeeHandler $handler;
 
     protected function setUp(): void
@@ -95,6 +101,8 @@ class CreateAttendeeHandlerTest extends TestCase
         $this->domainEventDispatcherService = Mockery::mock(DomainEventDispatcherService::class);
         $this->occurrenceEligibilityService = Mockery::mock(OccurrencePurchaseEligibilityService::class);
         $this->orderAuditLogService = Mockery::mock(OrderAuditLogService::class);
+        $this->questionRepository = Mockery::mock(QuestionRepositoryInterface::class);
+        $this->questionAnswerRepository = Mockery::mock(QuestionAnswerRepositoryInterface::class);
 
         $databaseManager = Mockery::mock(DatabaseManager::class);
         $databaseManager->shouldReceive('transaction')->andReturnUsing(fn (callable $callback) => $callback());
@@ -115,6 +123,8 @@ class CreateAttendeeHandlerTest extends TestCase
             $this->domainEventDispatcherService,
             $this->occurrenceEligibilityService,
             $this->orderAuditLogService,
+            $this->questionRepository,
+            $this->questionAnswerRepository,
         );
     }
 

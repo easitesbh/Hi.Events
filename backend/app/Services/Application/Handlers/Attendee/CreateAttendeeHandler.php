@@ -6,14 +6,17 @@ use Brick\Money\Money;
 use HiEvents\DomainObjects\AttendeeDomainObject;
 use HiEvents\DomainObjects\Enums\EventType;
 use HiEvents\DomainObjects\Enums\ProductType;
+use HiEvents\DomainObjects\Enums\QuestionBelongsTo;
 use HiEvents\DomainObjects\Generated\AttendeeDomainObjectAbstract;
 use HiEvents\DomainObjects\Generated\OrderDomainObjectAbstract;
 use HiEvents\DomainObjects\Generated\OrderItemDomainObjectAbstract;
 use HiEvents\DomainObjects\Generated\ProductDomainObjectAbstract;
+use HiEvents\DomainObjects\Generated\QuestionDomainObjectAbstract;
 use HiEvents\DomainObjects\OrderDomainObject;
 use HiEvents\DomainObjects\OrderItemDomainObject;
 use HiEvents\DomainObjects\ProductDomainObject;
 use HiEvents\DomainObjects\ProductPriceDomainObject;
+use HiEvents\DomainObjects\QuestionDomainObject;
 use HiEvents\DomainObjects\Status\AttendeeStatus;
 use HiEvents\DomainObjects\Status\OrderPaymentStatus;
 use HiEvents\DomainObjects\Status\OrderStatus;
@@ -26,6 +29,8 @@ use HiEvents\Repository\Interfaces\EventOccurrenceRepositoryInterface;
 use HiEvents\Repository\Interfaces\EventRepositoryInterface;
 use HiEvents\Repository\Interfaces\OrderRepositoryInterface;
 use HiEvents\Repository\Interfaces\ProductRepositoryInterface;
+use HiEvents\Repository\Interfaces\QuestionAnswerRepositoryInterface;
+use HiEvents\Repository\Interfaces\QuestionRepositoryInterface;
 use HiEvents\Repository\Interfaces\TaxAndFeeRepositoryInterface;
 use HiEvents\Services\Application\Handlers\Attendee\DTO\CreateAttendeeDTO;
 use HiEvents\Services\Application\Handlers\Attendee\DTO\CreateAttendeeTaxAndFeeDTO;
@@ -58,6 +63,8 @@ class CreateAttendeeHandler
         private readonly DomainEventDispatcherService $domainEventDispatcherService,
         private readonly OccurrencePurchaseEligibilityService $occurrenceEligibilityService,
         private readonly OrderAuditLogService $orderAuditLogService,
+        private readonly QuestionRepositoryInterface $questionRepository,
+        private readonly QuestionAnswerRepositoryInterface $questionAnswerRepository,
     ) {}
 
     /**
@@ -115,6 +122,8 @@ class CreateAttendeeHandler
             $orderItem = $this->createOrderItem($attendeeDTO, $order, $product, $productPriceId);
 
             $attendee = $this->createAttendee($order, $attendeeDTO, $productPriceId);
+
+            $this->createQuestionAnswers($attendeeDTO, $order, $attendee);
 
             $this->orderManagementService->updateOrderTotals($order, collect([$orderItem]));
 
@@ -249,6 +258,77 @@ class CreateAttendeeHandler
                 OrderItemDomainObjectAbstract::EVENT_OCCURRENCE_ID => $attendeeDTO->event_occurrence_id,
             ]
         );
+    }
+
+    /**
+     * Persist the answers captured in the "Manually Add Attendee" form. Order-level answers hang
+     * off the order, product-level answers off the attendee, exactly as the checkout stores them.
+     */
+    private function createQuestionAnswers(
+        CreateAttendeeDTO $attendeeDTO,
+        OrderDomainObject $order,
+        AttendeeDomainObject $attendee
+    ): void {
+        if (empty($attendeeDTO->questions)) {
+            return;
+        }
+
+        $questions = $this->questionRepository->findWhere([
+            QuestionDomainObjectAbstract::EVENT_ID => $attendeeDTO->event_id,
+        ]);
+
+        foreach ($attendeeDTO->questions as $questionData) {
+            $questionId = isset($questionData['question_id']) ? (int) $questionData['question_id'] : null;
+
+            if ($questionId === null) {
+                continue;
+            }
+
+            /** @var QuestionDomainObject|null $question */
+            $question = $questions->first(
+                fn (QuestionDomainObject $question) => $question->getId() === $questionId
+            );
+
+            if ($question === null) {
+                continue;
+            }
+
+            $answer = $this->extractAnswer($questionData['response'] ?? null);
+
+            if ($answer === null) {
+                continue;
+            }
+
+            $answerData = [
+                'question_id' => $questionId,
+                'answer' => $answer,
+                'order_id' => $order->getId(),
+            ];
+
+            if ($question->getBelongsTo() === QuestionBelongsTo::PRODUCT->name) {
+                $answerData['product_id'] = $attendeeDTO->product_id;
+                $answerData['attendee_id'] = $attendee->getId();
+            }
+
+            $this->questionAnswerRepository->create($answerData);
+        }
+    }
+
+    private function extractAnswer(mixed $response): mixed
+    {
+        if ($response === null) {
+            return null;
+        }
+
+        $answer = (is_array($response) && array_key_exists('answer', $response))
+            ? $response['answer']
+            : $response;
+
+        if ($answer === null || $answer === '' || $answer === []) {
+            return null;
+        }
+
+        return $answer;
     }
 
     private function createAttendee(OrderDomainObject $order, CreateAttendeeDTO $attendeeDTO, int $productPriceId): AttendeeDomainObject
